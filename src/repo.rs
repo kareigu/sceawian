@@ -60,7 +60,14 @@ impl RepositoryDetails {
                 .to_str()
                 .unwrap_or_else(|| "invalid output_path")
         );
-        let repo = Repository::clone(&self.source, output_path)?;
+
+        let mut callbacks = git2::RemoteCallbacks::default();
+        callbacks.credentials(|_, username, _| git2::Cred::ssh_key_from_agent(username.unwrap()));
+        let mut fetch_opts = git2::FetchOptions::default();
+        fetch_opts.remote_callbacks(callbacks);
+        let mut repo_build = git2::build::RepoBuilder::new();
+        repo_build.fetch_options(fetch_opts);
+        let repo = repo_build.clone(&self.source, output_path.as_ref())?;
         return Ok(repo);
     }
 }
