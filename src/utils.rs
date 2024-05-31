@@ -15,3 +15,9 @@ pub fn fetch_opts<'a>() -> git2::FetchOptions<'a> {
     fetch_opts.remote_callbacks(remote_callbacks());
     return fetch_opts;
 }
+
+pub fn push_opts<'a>() -> git2::PushOptions<'a> {
+    let mut push_opts = git2::PushOptions::default();
+    push_opts.remote_callbacks(remote_callbacks());
+    return push_opts;
+}

@@ -69,4 +69,22 @@ impl RepositoryDetails {
         let repo = repo_build.clone(&self.source, output_path.as_ref())?;
         return Ok(repo);
     }
+
+    pub fn mirror_to_target(&self, repo: &git2::Repository) -> Result<()> {
+        const TARGET_REMOTE_NAME: &str = "target";
+        const CONFIG_VALUE: &str = "remote.target.mirror";
+        if repo.find_remote(TARGET_REMOTE_NAME).is_ok() {
+            repo.remote_delete(TARGET_REMOTE_NAME)?;
+        }
+
+        repo.remote_add_push(TARGET_REMOTE_NAME, "dev")?;
+        repo.remote_set_pushurl(TARGET_REMOTE_NAME, Some(&self.target))?;
+        repo.config()?.set_bool(CONFIG_VALUE, true)?;
+
+        info!("pushing to {}", self.target);
+        repo.find_remote(TARGET_REMOTE_NAME)?
+            .push(&["+refs/heads/dev"], Some(&mut utils::push_opts()))?;
+
+        return Ok(());
+    }
 }

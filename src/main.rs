@@ -13,6 +13,7 @@ async fn main() -> Result<()> {
     let details = RepositoryDetails::read_from_file("repos/sceawian.toml")?;
     info!("details: {:?}", details);
 
-    let _repo = details.fetch(format!("workspace/{}", details.name))?;
+    let repo = details.fetch(format!("workspace/{}", details.name))?;
+    details.mirror_to_target(&repo)?;
     return Ok(());
 }
