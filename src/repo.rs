@@ -1,6 +1,7 @@
 use anyhow::Result;
 use git2::Repository;
 use serde::Deserialize;
+use tracing::info;
 
 #[derive(Deserialize, Debug)]
 pub struct RepositoryDetails {
@@ -25,10 +26,19 @@ impl RepositoryDetails {
         for branch in repo.branches(Some(git2::BranchType::Local))? {
             let (branch, _) = branch?;
             let branch_name = branch.name()?.unwrap();
+
+            info!("fetching {} from origin", branch_name);
             repo.find_remote("origin")?
                 .fetch(&[branch_name], None, None)?;
 
             let upstream = branch.upstream()?;
+            info!(
+                "resetting {} to {}",
+                branch_name,
+                upstream
+                    .name()?
+                    .unwrap_or_else(|| "invalid remote_branch_name")
+            );
             repo.reset(
                 &upstream.into_reference().peel(git2::ObjectType::Commit)?,
                 git2::ResetType::Hard,
@@ -42,6 +52,14 @@ impl RepositoryDetails {
         &self,
         output_path: P,
     ) -> Result<git2::Repository> {
+        info!(
+            "cloning {} into {}",
+            self.source,
+            output_path
+                .as_ref()
+                .to_str()
+                .unwrap_or_else(|| "invalid output_path")
+        );
         let repo = Repository::clone(&self.source, output_path)?;
         return Ok(repo);
     }

@@ -1,12 +1,16 @@
 use anyhow::Result;
+use tracing::info;
+use tracing_subscriber;
 
 mod repo;
 use repo::RepositoryDetails;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    tracing_subscriber::fmt::init();
+
     let details = RepositoryDetails::read_from_file("repos/sceawian.toml")?;
-    println!("{:?}", details);
+    info!("details: {:?}", details);
 
     let _repo = details.fetch(format!("workspace/{}", details.name))?;
     return Ok(());
