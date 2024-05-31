@@ -15,4 +15,12 @@ impl RepositoryDetails {
         let repo: Self = toml::from_str(&contents)?;
         return Ok(repo);
     }
+
+    pub fn clone_from_source<P: AsRef<std::path::Path>>(
+        &self,
+        output_path: P,
+    ) -> Result<git2::Repository> {
+        let repo = Repository::clone(&self.source, output_path)?;
+        return Ok(repo);
+    }
 }
