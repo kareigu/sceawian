@@ -4,6 +4,7 @@ use tracing_subscriber;
 
 mod repo;
 use repo::RepositoryDetails;
+mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {

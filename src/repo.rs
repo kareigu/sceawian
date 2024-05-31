@@ -1,3 +1,4 @@
+use crate::utils;
 use anyhow::Result;
 use git2::Repository;
 use serde::Deserialize;
@@ -61,12 +62,7 @@ impl RepositoryDetails {
                 .unwrap_or_else(|| "invalid output_path")
         );
 
-        let mut callbacks = git2::RemoteCallbacks::default();
-        callbacks.credentials(|_, username, _| git2::Cred::ssh_key_from_agent(username.unwrap()));
-        let mut fetch_opts = git2::FetchOptions::default();
-        fetch_opts.remote_callbacks(callbacks);
-        let mut repo_build = git2::build::RepoBuilder::new();
-        repo_build.fetch_options(fetch_opts);
+        let mut repo_build = utils::repo_build();
         let repo = repo_build.clone(&self.source, output_path.as_ref())?;
         return Ok(repo);
     }
