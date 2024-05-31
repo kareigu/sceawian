@@ -38,9 +38,7 @@ impl RepositoryDetails {
             info!(
                 "resetting {} to {}",
                 branch_name,
-                upstream
-                    .name()?
-                    .unwrap_or("invalid remote_branch_name")
+                upstream.name()?.unwrap_or("invalid remote_branch_name")
             );
             repo.reset(
                 &upstream.into_reference().peel(git2::ObjectType::Commit)?,
