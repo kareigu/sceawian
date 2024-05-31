@@ -29,8 +29,11 @@ impl RepositoryDetails {
             let branch_name = branch.name()?.unwrap();
 
             info!("fetching {} from origin", branch_name);
-            repo.find_remote("origin")?
-                .fetch(&[branch_name], None, None)?;
+            repo.find_remote("origin")?.fetch(
+                &[branch_name],
+                Some(&mut utils::fetch_opts()),
+                None,
+            )?;
 
             let upstream = branch.upstream()?;
             info!(
