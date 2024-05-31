@@ -1,6 +1,5 @@
 use crate::utils;
 use anyhow::Result;
-use git2::Repository;
 use serde::Deserialize;
 use tracing::info;
 
@@ -15,7 +14,7 @@ impl RepositoryDetails {
     pub fn read_from_file<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
         let contents = std::fs::read_to_string(path)?;
         let repo: Self = toml::from_str(&contents)?;
-        return Ok(repo);
+        Ok(repo)
     }
 
     pub fn fetch<P: AsRef<std::path::Path>>(&self, output_path: P) -> Result<git2::Repository> {
@@ -41,7 +40,7 @@ impl RepositoryDetails {
                 branch_name,
                 upstream
                     .name()?
-                    .unwrap_or_else(|| "invalid remote_branch_name")
+                    .unwrap_or("invalid remote_branch_name")
             );
             repo.reset(
                 &upstream.into_reference().peel(git2::ObjectType::Commit)?,
@@ -49,7 +48,7 @@ impl RepositoryDetails {
                 None,
             )?;
         }
-        return Ok(repo);
+        Ok(repo)
     }
 
     pub fn clone_from_source<P: AsRef<std::path::Path>>(
@@ -62,12 +61,12 @@ impl RepositoryDetails {
             output_path
                 .as_ref()
                 .to_str()
-                .unwrap_or_else(|| "invalid output_path")
+                .unwrap_or("invalid output_path")
         );
 
         let mut repo_build = utils::repo_build();
         let repo = repo_build.clone(&self.source, output_path.as_ref())?;
-        return Ok(repo);
+        Ok(repo)
     }
 
     pub fn mirror_to_target(&self, repo: &git2::Repository) -> Result<()> {
@@ -85,6 +84,6 @@ impl RepositoryDetails {
         repo.find_remote(TARGET_REMOTE_NAME)?
             .push(&["+refs/heads/dev"], Some(&mut utils::push_opts()))?;
 
-        return Ok(());
+        Ok(())
     }
 }

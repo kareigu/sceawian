@@ -1,6 +1,5 @@
 use anyhow::Result;
 use tracing::info;
-use tracing_subscriber;
 
 mod repo;
 use repo::RepositoryDetails;
