@@ -39,7 +39,7 @@ impl RepositoryDetails {
         );
         let mut fetch = git_cmd();
         fetch.current_dir(output_path);
-        fetch.args(["fetch", "origin"]);
+        fetch.args(["fetch", "--prune", "origin"]);
         fetch.spawn()?.wait()?;
 
         Ok(())
