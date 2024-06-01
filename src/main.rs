@@ -9,8 +9,9 @@ async fn run_actions(path: std::path::PathBuf) -> Result<RepositoryDetails> {
     let details = RepositoryDetails::read_from_file(&path)?;
     info!("details {}: {}", path.display(), details);
 
-    let repo = details.fetch(format!("workspace/{}", details.name))?;
-    details.mirror_to_target(&repo)?;
+    let output_path = format!("workspace/{}", details.name);
+    details.fetch(&output_path)?;
+    details.mirror_to_target(output_path)?;
     Ok(details)
 }
 

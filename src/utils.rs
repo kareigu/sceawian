@@ -1,23 +1,7 @@
-pub fn repo_build<'a>() -> git2::build::RepoBuilder<'a> {
-    let mut repo_build = git2::build::RepoBuilder::new();
-    repo_build.fetch_options(fetch_opts());
-    repo_build
+pub fn git_cmd() -> std::process::Command {
+    let mut cmd = std::process::Command::new("git");
+    cmd.stdout(std::process::Stdio::null());
+    cmd.stderr(std::process::Stdio::null());
+    cmd
 }
 
-pub fn remote_callbacks<'a>() -> git2::RemoteCallbacks<'a> {
-    let mut callbacks = git2::RemoteCallbacks::default();
-    callbacks.credentials(|_, username, _| git2::Cred::ssh_key_from_agent(username.unwrap()));
-    callbacks
-}
-
-pub fn fetch_opts<'a>() -> git2::FetchOptions<'a> {
-    let mut fetch_opts = git2::FetchOptions::default();
-    fetch_opts.remote_callbacks(remote_callbacks());
-    fetch_opts
-}
-
-pub fn push_opts<'a>() -> git2::PushOptions<'a> {
-    let mut push_opts = git2::PushOptions::default();
-    push_opts.remote_callbacks(remote_callbacks());
-    push_opts
-}

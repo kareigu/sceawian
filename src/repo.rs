@@ -1,4 +1,4 @@
-use crate::utils;
+use crate::utils::git_cmd;
 use anyhow::Result;
 use serde::Deserialize;
 use tracing::info;
@@ -28,48 +28,24 @@ impl RepositoryDetails {
         Ok(repo)
     }
 
-    pub fn fetch<P: AsRef<std::path::Path>>(&self, output_path: P) -> Result<git2::Repository> {
-        let repo = if !output_path.as_ref().exists() {
-            self.clone_from_source(output_path)?
-        } else {
-            git2::Repository::open(output_path)?
-        };
-
-        for branch in repo.branches(Some(git2::BranchType::Local))? {
-            let (branch, _) = branch?;
-            let branch_name = branch.name()?.unwrap();
-
-            if branch_name == "HEAD" {
-                continue;
-            }
-
-            info!("{}: fetching {} from origin", self.name, branch_name);
-            repo.find_remote("origin")?.fetch(
-                &[branch_name],
-                Some(&mut utils::fetch_opts()),
-                None,
-            )?;
-
-            let upstream = branch.upstream()?;
-            info!(
-                "{}: resetting {} to {}",
-                self.name,
-                branch_name,
-                upstream.name()?.unwrap_or("invalid remote_branch_name")
-            );
-            repo.reset(
-                &upstream.into_reference().peel(git2::ObjectType::Commit)?,
-                git2::ResetType::Hard,
-                None,
-            )?;
+    pub fn fetch<P: AsRef<std::path::Path>>(&self, output_path: P) -> Result<()> {
+        if !output_path.as_ref().exists() {
+            return self.clone_from_source(output_path);
         }
-        Ok(repo)
+
+        info!(
+            "{}: fetching latest changes from {}",
+            self.name, self.source,
+        );
+        let mut fetch = git_cmd();
+        fetch.current_dir(output_path);
+        fetch.args(["fetch", "origin"]);
+        fetch.spawn()?.wait()?;
+
+        Ok(())
     }
 
-    pub fn clone_from_source<P: AsRef<std::path::Path>>(
-        &self,
-        output_path: P,
-    ) -> Result<git2::Repository> {
+    pub fn clone_from_source<P: AsRef<std::path::Path>>(&self, output_path: P) -> Result<()> {
         info!(
             "{}: cloning {} into {}",
             self.name,
@@ -80,54 +56,24 @@ impl RepositoryDetails {
                 .unwrap_or("invalid output_path")
         );
 
-        let mut repo_build = utils::repo_build();
-        let repo = repo_build.clone(&self.source, output_path.as_ref())?;
-        for remote_branch in repo.branches(Some(git2::BranchType::Remote))? {
-            let (branch, _) = remote_branch?;
-            let branch_name = branch.name()?.unwrap().to_string();
-            let local_branch_name = &branch_name[branch_name.find('/').unwrap()..];
+        let mut clone = git_cmd();
+        clone.args([
+            "clone",
+            "--mirror",
+            &self.source,
+            output_path.as_ref().to_str().unwrap(),
+        ]);
+        clone.spawn()?.wait()?;
 
-            if let Ok(existing) = repo.find_branch(local_branch_name, git2::BranchType::Local) {
-                if existing.is_head() {
-                    continue;
-                }
-            }
-
-            let mut local_branch = repo.branch(
-                local_branch_name,
-                &branch.into_reference().peel_to_commit()?,
-                false,
-            )?;
-            local_branch.set_upstream(Some(&branch_name))?;
-        }
-        Ok(repo)
+        Ok(())
     }
 
-    pub fn mirror_to_target(&self, repo: &git2::Repository) -> Result<()> {
-        const TARGET_REMOTE_NAME: &str = "target";
-        const CONFIG_VALUE: &str = "remote.target.mirror";
-        if repo.find_remote(TARGET_REMOTE_NAME).is_ok() {
-            repo.remote_delete(TARGET_REMOTE_NAME)?;
-        }
-
-        repo.remote_add_push(TARGET_REMOTE_NAME, "dev")?;
-        repo.remote_set_pushurl(TARGET_REMOTE_NAME, Some(&self.target))?;
-        repo.config()?.set_bool(CONFIG_VALUE, true)?;
-
-        info!("{}: pushing to {}", self.name, self.target);
-        let mut remote = repo.find_remote(TARGET_REMOTE_NAME)?;
-
-        for branch in repo.branches(Some(git2::BranchType::Local))? {
-            let (branch, _) = branch?;
-            let branch_name = branch.name()?.unwrap();
-            if branch_name == "HEAD" {
-                continue;
-            }
-            remote.push(
-                &[format!("+refs/heads/{}", branch_name)],
-                Some(&mut utils::push_opts()),
-            )?;
-        }
+    pub fn mirror_to_target<P: AsRef<std::path::Path>>(&self, work_path: P) -> Result<()> {
+        info!("{}: pushing mirror to {}", self.name, self.target,);
+        let mut push = git_cmd();
+        push.current_dir(work_path);
+        push.args(["push", "--mirror", &self.target]);
+        push.spawn()?.wait()?;
 
         Ok(())
     }
