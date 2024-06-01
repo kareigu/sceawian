@@ -6,7 +6,6 @@ authors = ["karei <mail@karei.dev>"]
 
 [dependencies]
 anyhow = "1.0.86"
-git2 = "0.18.3"
 serde = { version = "1.0.203", features = ["derive"] }
 tokio = { version = "1.38.0", features = ["full"] }
 tokio-macros = "2.3.0"
