@@ -12,10 +12,10 @@ pub struct RepositoryDetails {
 
 impl std::fmt::Display for RepositoryDetails {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f);
-        writeln!(f, "name: {}", self.name);
-        writeln!(f, "source: {}", self.source);
-        writeln!(f, "target: {}", self.target);
+        writeln!(f)?;
+        writeln!(f, "name: {}", self.name)?;
+        writeln!(f, "source: {}", self.source)?;
+        writeln!(f, "target: {}", self.target)?;
 
         Ok(())
     }
