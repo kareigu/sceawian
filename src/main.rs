@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
 
         match res.unwrap() {
             Ok(details) => info!("{}: mirroring finished", details.name),
-            Err(e) => error!("mirroring failed: {}", e),
+            Err(e) => error!("{}", e),
         }
     }
 

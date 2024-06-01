@@ -21,6 +21,13 @@ impl std::fmt::Display for RepositoryDetails {
     }
 }
 
+#[derive(thiserror::Error, Debug)]
+#[error("{msg}: mirroring failed: {source}")]
+pub struct Error {
+    msg: String,
+    source: anyhow::Error,
+}
+
 impl RepositoryDetails {
     pub fn read_from_file<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
         let contents = std::fs::read_to_string(path)?;
@@ -28,7 +35,7 @@ impl RepositoryDetails {
         Ok(repo)
     }
 
-    pub fn fetch<P: AsRef<std::path::Path>>(&self, output_path: P) -> Result<()> {
+    pub fn fetch<P: AsRef<std::path::Path>>(&self, output_path: P) -> Result<(), Error> {
         if !output_path.as_ref().exists() {
             return self.clone_from_source(output_path);
         }
@@ -40,12 +47,25 @@ impl RepositoryDetails {
         let mut fetch = git_cmd();
         fetch.current_dir(output_path);
         fetch.args(["fetch", "--prune", "origin"]);
-        fetch.spawn()?.wait()?;
+        let exit = fetch
+            .spawn()
+            .and_then(|mut e| Ok(e.wait()?))
+            .map_err(self.wrap_err())?;
+
+        if !exit.success() {
+            return Err(self.wrap_err()(anyhow::anyhow!(
+                "git fetch exited with code {}",
+                exit.code().unwrap_or(-999)
+            )));
+        }
 
         Ok(())
     }
 
-    pub fn clone_from_source<P: AsRef<std::path::Path>>(&self, output_path: P) -> Result<()> {
+    pub fn clone_from_source<P: AsRef<std::path::Path>>(
+        &self,
+        output_path: P,
+    ) -> Result<(), Error> {
         info!(
             "{}: cloning {} into {}",
             self.name,
@@ -63,18 +83,48 @@ impl RepositoryDetails {
             &self.source,
             output_path.as_ref().to_str().unwrap(),
         ]);
-        clone.spawn()?.wait()?;
+        let exit = clone
+            .spawn()
+            .and_then(|mut e| Ok(e.wait()?))
+            .map_err(self.wrap_err())?;
+
+        if !exit.success() {
+            return Err(self.wrap_err()(anyhow::anyhow!(
+                "git clone exited with code {}",
+                exit.code().unwrap_or(-999)
+            )));
+        }
 
         Ok(())
     }
 
-    pub fn mirror_to_target<P: AsRef<std::path::Path>>(&self, work_path: P) -> Result<()> {
+    pub fn mirror_to_target<P: AsRef<std::path::Path>>(&self, work_path: P) -> Result<(), Error> {
         info!("{}: pushing mirror to {}", self.name, self.target,);
         let mut push = git_cmd();
         push.current_dir(work_path);
         push.args(["push", "--mirror", &self.target]);
-        push.spawn()?.wait()?;
+        let exit = push
+            .spawn()
+            .and_then(|mut e| Ok(e.wait()?))
+            .map_err(self.wrap_err())?;
+
+        if !exit.success() {
+            return Err(self.wrap_err()(anyhow::anyhow!(
+                "git push exited with code {}",
+                exit.code().unwrap_or(-999)
+            )));
+        }
 
         Ok(())
+    }
+
+    fn wrap_err<E>(&self) -> impl FnOnce(E) -> Error + '_
+    where
+        E: Into<anyhow::Error>,
+    {
+        move |e| Error {
+            msg: self.name.clone(),
+            source: e.into(),
+        }
     }
 }
