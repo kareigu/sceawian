@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
         }
 
         let details = RepositoryDetails::read_from_file(file.path())?;
-        info!("details: {:?}", details);
+        info!("details {}: {}", file.path().display(), details);
 
         let repo = details.fetch(format!("workspace/{}", details.name))?;
         details.mirror_to_target(&repo)?;

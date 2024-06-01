@@ -10,6 +10,17 @@ pub struct RepositoryDetails {
     pub target: String,
 }
 
+impl std::fmt::Display for RepositoryDetails {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f);
+        writeln!(f, "name: {}", self.name);
+        writeln!(f, "source: {}", self.source);
+        writeln!(f, "target: {}", self.target);
+
+        Ok(())
+    }
+}
+
 impl RepositoryDetails {
     pub fn read_from_file<P: AsRef<std::path::Path>>(path: P) -> Result<Self> {
         let contents = std::fs::read_to_string(path)?;
