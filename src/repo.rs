@@ -38,7 +38,7 @@ impl RepositoryDetails {
             let (branch, _) = branch?;
             let branch_name = branch.name()?.unwrap();
 
-            info!("fetching {} from origin", branch_name);
+            info!("{}: fetching {} from origin", self.name, branch_name);
             repo.find_remote("origin")?.fetch(
                 &[branch_name],
                 Some(&mut utils::fetch_opts()),
@@ -47,7 +47,8 @@ impl RepositoryDetails {
 
             let upstream = branch.upstream()?;
             info!(
-                "resetting {} to {}",
+                "{}: resetting {} to {}",
+                self.name,
                 branch_name,
                 upstream.name()?.unwrap_or("invalid remote_branch_name")
             );
@@ -65,7 +66,8 @@ impl RepositoryDetails {
         output_path: P,
     ) -> Result<git2::Repository> {
         info!(
-            "cloning {} into {}",
+            "{}: cloning {} into {}",
+            self.name,
             self.source,
             output_path
                 .as_ref()
@@ -89,7 +91,7 @@ impl RepositoryDetails {
         repo.remote_set_pushurl(TARGET_REMOTE_NAME, Some(&self.target))?;
         repo.config()?.set_bool(CONFIG_VALUE, true)?;
 
-        info!("pushing to {}", self.target);
+        info!("{}: pushing to {}", self.name, self.target);
         repo.find_remote(TARGET_REMOTE_NAME)?
             .push(&["+refs/heads/dev"], Some(&mut utils::push_opts()))?;
 

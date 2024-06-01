@@ -5,15 +5,26 @@ mod repo;
 use repo::RepositoryDetails;
 mod utils;
 
+async fn run_actions(path: std::path::PathBuf) -> Result<RepositoryDetails> {
+    let details = RepositoryDetails::read_from_file(&path)?;
+    info!("details {}: {}", path.display(), details);
+
+    let repo = details.fetch(format!("workspace/{}", details.name))?;
+    details.mirror_to_target(&repo)?;
+    Ok(details)
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
+
+    let mut handles = tokio::task::JoinSet::new();
 
     for file in std::path::Path::new("repos").read_dir()? {
         let file = match file {
             Ok(f) => f,
             Err(e) => {
-                error!("Failed getting file: {}", e);
+                error!("failed getting file: {}", e);
                 continue;
             }
         };
@@ -24,11 +35,19 @@ async fn main() -> Result<()> {
             }
         }
 
-        let details = RepositoryDetails::read_from_file(file.path())?;
-        info!("details {}: {}", file.path().display(), details);
+        handles.spawn(run_actions(file.path()));
+    }
 
-        let repo = details.fetch(format!("workspace/{}", details.name))?;
-        details.mirror_to_target(&repo)?;
+    while let Some(res) = handles.join_next().await {
+        if let Err(e) = res {
+            error!("joining task failed: {}", e);
+            continue;
+        }
+
+        match res.unwrap() {
+            Ok(details) => info!("{}: mirroring finished", details.name),
+            Err(e) => error!("mirroring failed: {}", e),
+        }
     }
 
     return Ok(());
