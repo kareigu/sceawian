@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::Deserialize;
 use tracing::warn;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, Copy)]
 pub struct Interval(u64);
 
 impl Default for Interval {

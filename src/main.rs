@@ -55,15 +55,18 @@ async fn main() -> Result<()> {
                     continue;
                 }
             }
-
-            handles.spawn(run_actions(file.path()));
+            handles.spawn(tokio::time::timeout(
+                tokio::time::Duration::from_secs(config.update_interval.into()),
+                run_actions(file.path()),
+            ));
         }
 
         while let Some(res) = handles.join_next().await {
             match res {
                 Err(e) => error!("joining task failed: {}", e),
-                Ok(Err(e)) => error!("{}", e),
-                Ok(Ok(details)) => info!("{}: mirroring finished", details.name),
+                Ok(Err(e)) => error!("task timed out after {}", e),
+                Ok(Ok(Err(e))) => error!("{}", e),
+                Ok(Ok(Ok(details))) => info!("{}: mirroring finished", details.name),
             }
         }
     }
