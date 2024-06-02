@@ -1,0 +1,12 @@
+services:
+  sceawian:
+    image: kareigu/sceawian:latest
+    container_name: sceawian
+    restart: unless-stopped
+    volumes:
+      - ./repos:/usr/share/sceawian/repos
+      - ./config.toml:/usr/share/sceawian/config.toml
+      - ./ssh:/root/.ssh
+    environment:
+      - RUST_LOG=INFO
+      - GIT_SSH_COMMAND=ssh -i /root/.ssh/mirror_service
