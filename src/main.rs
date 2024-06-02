@@ -3,6 +3,8 @@ use tracing::{error, info};
 
 mod repo;
 use repo::RepositoryDetails;
+mod config;
+use config::Config;
 mod utils;
 
 async fn run_actions(path: std::path::PathBuf) -> Result<RepositoryDetails> {
@@ -19,9 +21,14 @@ async fn run_actions(path: std::path::PathBuf) -> Result<RepositoryDetails> {
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
+    let config = Config::read_from_file("config.toml")?;
+    info!("using config values: {}", config);
+
     let mut handles = tokio::task::JoinSet::new();
 
-    let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(20));
+    let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(
+        config.update_interval.into(),
+    ));
     let mut prev_time = tokio::time::Instant::now();
 
     loop {
