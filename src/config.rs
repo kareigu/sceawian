@@ -7,7 +7,7 @@ pub struct Interval(u64);
 
 impl Default for Interval {
     fn default() -> Self {
-        Self(20)
+        Self(40)
     }
 }
 
