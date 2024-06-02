@@ -37,10 +37,7 @@ async fn main() -> Result<()> {
         info!("updating mirrors after waiting for {} seconds", duration);
         prev_time = time;
 
-        let Ok(repos_dir) = std::path::Path::new("repos").read_dir() else {
-            continue;
-        };
-
+        let repos_dir = std::path::Path::new(&config.repos).read_dir()?;
         for file in repos_dir {
             let file = match file {
                 Ok(f) => f,
