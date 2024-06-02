@@ -21,6 +21,8 @@ impl Into<u64> for Interval {
 pub struct Config {
     #[serde(default)]
     pub update_interval: Interval,
+    #[serde(default = "default_repos")]
+    pub repos: String,
 }
 
 impl Config {
@@ -39,7 +41,8 @@ impl Config {
 impl std::fmt::Display for Config {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f)?;
-        writeln!(f, "update_interval = {} seconds", self.update_interval.0)
+        writeln!(f, "update_interval = {} seconds", self.update_interval.0)?;
+        writeln!(f, "repos = {}", self.repos)
     }
 }
 
@@ -47,6 +50,11 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             update_interval: Interval::default(),
+            repos: default_repos(),
         }
     }
+}
+
+fn default_repos() -> String {
+    "repos".to_string()
 }
