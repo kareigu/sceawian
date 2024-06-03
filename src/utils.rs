@@ -4,4 +4,3 @@ pub fn git_cmd() -> std::process::Command {
     cmd.stderr(std::process::Stdio::null());
     cmd
 }
-
