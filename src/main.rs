@@ -38,23 +38,21 @@ async fn main() -> Result<()> {
         prev_time = time;
 
         let repos_dir = std::path::Path::new(&config.repos).read_dir()?;
-        for file in repos_dir {
-            let file = match file {
-                Ok(f) => f,
+        let paths = repos_dir
+            .filter(|file| match file {
+                Ok(file) => file.path().extension().map_or(false, |ext| ext == "toml"),
                 Err(e) => {
                     error!("failed getting file: {}", e);
-                    continue;
+                    false
                 }
-            };
+            })
+            .map(|file| file.expect("somehow error didn't get filtered").path())
+            .collect::<Vec<std::path::PathBuf>>();
 
-            if let Some(ext) = file.path().extension() {
-                if ext != "toml" {
-                    continue;
-                }
-            }
+        for path in paths {
             handles.spawn(tokio::time::timeout(
                 tokio::time::Duration::from_secs(config.update_interval.into()),
-                run_actions(file.path()),
+                run_actions(path),
             ));
         }
 
