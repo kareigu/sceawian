@@ -7,6 +7,8 @@ mod config;
 use config::Config;
 mod utils;
 
+const CONCURRENT_TASK_COUNT: usize = 4;
+
 async fn run_actions(path: std::path::PathBuf) -> Result<RepositoryDetails> {
     let details = RepositoryDetails::read_from_file(&path)?;
     info!("details {}: {}", path.display(), details);
@@ -49,7 +51,7 @@ async fn main() -> Result<()> {
             .map(|file| file.expect("somehow error didn't get filtered").path())
             .collect::<Vec<std::path::PathBuf>>();
 
-        for _ in 0..4 {
+        for _ in 0..CONCURRENT_TASK_COUNT {
             if let Some(path) = paths.pop() {
                 handles.spawn(tokio::time::timeout(
                     tokio::time::Duration::from_secs(config.update_interval.into()),
@@ -60,12 +62,22 @@ async fn main() -> Result<()> {
 
         loop {
             match handles.join_next().await {
-                Some(res) => match res {
-                    Err(e) => error!("joining task failed: {}", e),
-                    Ok(Err(e)) => error!("task timed out after {}", e),
-                    Ok(Ok(Err(e))) => error!("{}", e),
-                    Ok(Ok(Ok(details))) => info!("{}: mirroring finished", details.name),
-                },
+                Some(res) => {
+                    match res {
+                        Err(e) => error!("joining task failed: {}", e),
+                        Ok(Err(e)) => error!("task timed out after {}", e),
+                        Ok(Ok(Err(e))) => error!("{}", e),
+                        Ok(Ok(Ok(details))) => info!("{}: mirroring finished", details.name),
+                    };
+
+                    if handles.len() < CONCURRENT_TASK_COUNT {
+                        let Some(path) = paths.pop() else { continue };
+                        handles.spawn(tokio::time::timeout(
+                            tokio::time::Duration::from_secs(config.update_interval.into()),
+                            run_actions(path),
+                        ));
+                    }
+                }
                 None if !paths.is_empty() => {
                     let path = paths.pop().expect("empty paths");
                     handles.spawn(tokio::time::timeout(
