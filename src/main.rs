@@ -41,14 +41,19 @@ async fn main() -> Result<()> {
 
         let repos_dir = std::path::Path::new(&config.repos).read_dir()?;
         let mut paths = repos_dir
-            .filter(|file| match file {
-                Ok(file) => file.path().extension().map_or(false, |ext| ext == "toml"),
+            .filter_map(|file| match file {
+                Ok(file) => file.path().extension().and_then(|ext| {
+                    if ext == "toml" {
+                        Some(file.path())
+                    } else {
+                        None
+                    }
+                }),
                 Err(e) => {
                     error!("failed getting file: {}", e);
-                    false
+                    None
                 }
             })
-            .map(|file| file.expect("somehow error didn't get filtered").path())
             .collect::<Vec<std::path::PathBuf>>();
 
         for _ in 0..CONCURRENT_TASK_COUNT {
@@ -79,7 +84,7 @@ async fn main() -> Result<()> {
                     }
                 }
                 None if !paths.is_empty() => {
-                    let path = paths.pop().expect("empty paths");
+                    let Some(path) = paths.pop() else { continue };
                     handles.spawn(tokio::time::timeout(
                         tokio::time::Duration::from_secs(config.update_interval.into()),
                         run_actions(path),
