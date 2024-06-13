@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
         prev_time = time;
 
         let repos_dir = std::path::Path::new(&config.repos).read_dir()?;
-        let paths = repos_dir
+        let mut paths = repos_dir
             .filter(|file| match file {
                 Ok(file) => file.path().extension().map_or(false, |ext| ext == "toml"),
                 Err(e) => {
@@ -49,20 +49,33 @@ async fn main() -> Result<()> {
             .map(|file| file.expect("somehow error didn't get filtered").path())
             .collect::<Vec<std::path::PathBuf>>();
 
-        for path in paths {
-            handles.spawn(tokio::time::timeout(
-                tokio::time::Duration::from_secs(config.update_interval.into()),
-                run_actions(path),
-            ));
-        }
-
-        while let Some(res) = handles.join_next().await {
-            match res {
-                Err(e) => error!("joining task failed: {}", e),
-                Ok(Err(e)) => error!("task timed out after {}", e),
-                Ok(Ok(Err(e))) => error!("{}", e),
-                Ok(Ok(Ok(details))) => info!("{}: mirroring finished", details.name),
+        for _ in 0..4 {
+            if let Some(path) = paths.pop() {
+                handles.spawn(tokio::time::timeout(
+                    tokio::time::Duration::from_secs(config.update_interval.into()),
+                    run_actions(path),
+                ));
             }
         }
+
+        loop {
+            match handles.join_next().await {
+                Some(res) => match res {
+                    Err(e) => error!("joining task failed: {}", e),
+                    Ok(Err(e)) => error!("task timed out after {}", e),
+                    Ok(Ok(Err(e))) => error!("{}", e),
+                    Ok(Ok(Ok(details))) => info!("{}: mirroring finished", details.name),
+                },
+                None if !paths.is_empty() => {
+                    let path = paths.pop().expect("empty paths");
+                    handles.spawn(tokio::time::timeout(
+                        tokio::time::Duration::from_secs(config.update_interval.into()),
+                        run_actions(path),
+                    ));
+                }
+                None => break,
+            }
+        }
+        info!("finished processing all batches");
     }
 }
