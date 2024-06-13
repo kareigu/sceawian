@@ -7,8 +7,6 @@ mod config;
 use config::Config;
 mod utils;
 
-const CONCURRENT_TASK_COUNT: usize = 4;
-
 async fn run_actions(path: std::path::PathBuf) -> Result<RepositoryDetails> {
     let details = RepositoryDetails::read_from_file(&path)?;
     info!("details {}: {}", path.display(), details);
@@ -56,7 +54,7 @@ async fn main() -> Result<()> {
             })
             .collect::<Vec<std::path::PathBuf>>();
 
-        for _ in 0..CONCURRENT_TASK_COUNT {
+        for _ in 0..config.task_count {
             if let Some(path) = paths.pop() {
                 handles.spawn(tokio::time::timeout(
                     tokio::time::Duration::from_secs(config.update_interval.into()),
@@ -75,7 +73,7 @@ async fn main() -> Result<()> {
                         Ok(Ok(Ok(details))) => info!("{}: mirroring finished", details.name),
                     };
 
-                    if handles.len() < CONCURRENT_TASK_COUNT {
+                    if handles.len() < config.task_count {
                         let Some(path) = paths.pop() else { continue };
                         handles.spawn(tokio::time::timeout(
                             tokio::time::Duration::from_secs(config.update_interval.into()),
