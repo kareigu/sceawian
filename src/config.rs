@@ -11,9 +11,9 @@ impl Default for Interval {
     }
 }
 
-impl Into<u64> for Interval {
-    fn into(self) -> u64 {
-        self.0
+impl From<Interval> for u64 {
+    fn from(val: Interval) -> u64 {
+        val.0
     }
 }
 

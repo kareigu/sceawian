@@ -49,7 +49,7 @@ impl RepositoryDetails {
         fetch.args(["fetch", "--prune", "origin"]);
         let exit = fetch
             .spawn()
-            .and_then(|mut e| Ok(e.wait()?))
+            .and_then(|mut e| e.wait())
             .map_err(self.wrap_err())?;
 
         if !exit.success() {
@@ -85,7 +85,7 @@ impl RepositoryDetails {
         ]);
         let exit = clone
             .spawn()
-            .and_then(|mut e| Ok(e.wait()?))
+            .and_then(|mut e| e.wait())
             .map_err(self.wrap_err())?;
 
         if !exit.success() {
@@ -105,7 +105,7 @@ impl RepositoryDetails {
         push.args(["push", "--mirror", &self.target]);
         let exit = push
             .spawn()
-            .and_then(|mut e| Ok(e.wait()?))
+            .and_then(|mut e| e.wait())
             .map_err(self.wrap_err())?;
 
         if !exit.success() {
